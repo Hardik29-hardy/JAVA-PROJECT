@@ -1,0 +1,214 @@
+import java.util.*;
+
+public class HotelReservationSystem {
+
+    enum RoomType {
+        SINGLE, DOUBLE, SUITE
+    }
+
+    static class Room {
+        int number;
+        RoomType type;
+
+        Room(int number, RoomType type) {
+            this.number = number;
+            this.type = type;
+        }
+
+        @Override
+        public String toString() {
+            return "Room " + number + " [" + type + "]";
+        }
+    }
+
+    static class Booking {
+        String guestName;
+        Room roomBooked;
+        String checkIn;
+        String checkOut;
+        boolean isPaid;
+
+        Booking(String guestName, Room room, String checkIn, String checkOut) {
+            this.guestName = guestName;
+            this.roomBooked = room;
+            this.checkIn = checkIn;
+            this.checkOut = checkOut;
+            this.isPaid = false;
+        }
+
+        @Override
+        public String toString() {
+            return guestName + " booked " + roomBooked + " from " + checkIn + " to " + checkOut +
+                    (isPaid ? " [PAID]" : " [NOT PAID]");
+        }
+    }
+
+    static class Hotel {
+        List<Room> roomList = new ArrayList<>();
+        List<Booking> bookings = new ArrayList<>();
+
+        Hotel() {
+          
+            roomList.add(new Room(101, RoomType.SINGLE));
+            roomList.add(new Room(102, RoomType.SINGLE));
+            roomList.add(new Room(201, RoomType.DOUBLE));
+            roomList.add(new Room(202, RoomType.DOUBLE));
+            roomList.add(new Room(301, RoomType.SUITE));
+        }
+
+        boolean isAvailable(Room room, String from, String to) {
+            for (Booking b : bookings) {
+                if (b.roomBooked.number == room.number && datesClash(from, to, b.checkIn, b.checkOut)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        boolean datesClash(String start1, String end1, String start2, String end2) {
+          
+            return !(end1.compareTo(start2) <= 0 || start1.compareTo(end2) >= 0);
+        }
+
+        List<Room> getAvailableRooms(RoomType type, String from, String to) {
+            List<Room> matches = new ArrayList<>();
+            for (Room r : roomList) {
+                if (r.type == type && isAvailable(r, from, to)) {
+                    matches.add(r);
+                }
+            }
+            return matches;
+        }
+
+        Booking createBooking(String name, Room room, String from, String to) {
+            if (!isAvailable(room, from, to)) {
+                return null;
+            }
+            Booking newBooking = new Booking(name, room, from, to);
+            bookings.add(newBooking);
+            return newBooking;
+        }
+
+        boolean handlePayment(Booking booking, double amount) 
+{
+            booking.isPaid = true;
+            System.out.printf("Received $%.2f from %s. Booking marked as paid.%n", amount, booking.guestName);
+            return true;
+        }
+
+        void listBookings() {
+            if (bookings.isEmpty()) {
+                System.out.println("No bookings found.");
+            } else {
+                System.out.println("\n-- Booking Records --");
+                for (Booking b : bookings) {
+                    System.out.println(b);
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        Hotel hotel = new Hotel();
+
+        System.out.println("=== Welcome to the Hotel System ===");
+
+        while (true) {
+            System.out.println("\nOptions: SEARCH | BOOK | VIEW | EXIT");
+            System.out.print("Your choice: ");
+            String choice = sc.next().trim().toUpperCase();
+
+            switch (choice) {
+                case "SEARCH":
+                    System.out.print("Enter room type (SINGLE/DOUBLE/SUITE): ");
+                    String typeInput = sc.next().toUpperCase();
+                    RoomType chosenType;
+                    try {
+                        chosenType = RoomType.valueOf(typeInput);
+                    } catch (Exception e) {
+                        System.out.println("Invalid room type!");
+                        continue;
+                    }
+
+                    System.out.print("Check-in date (YYYY-MM-DD): ");
+                    String checkIn = sc.next();
+                    System.out.print("Check-out date (YYYY-MM-DD): ");
+                    String checkOut = sc.next();
+
+                    List<Room> foundRooms = hotel.getAvailableRooms(chosenType, checkIn, checkOut);
+                    if (foundRooms.isEmpty()) {
+                        System.out.println("Sorry, no rooms available for that selection.");
+                    } else {
+                        System.out.println("Rooms you can book:");
+                        for (Room r : foundRooms) {
+                            System.out.println(" - " + r);
+                        }
+                    }
+                    break;
+
+                case "BOOK":
+                    sc.nextLine(); // handle newline after previous input
+                    System.out.print("Your full name: ");
+                    String guest = sc.nextLine();
+
+                    System.out.print("Room number to book: ");
+                    int number = sc.nextInt();
+
+                    System.out.print("Check-in date (YYYY-MM-DD): ");
+                    String in = sc.next();
+                    System.out.print("Check-out date (YYYY-MM-DD): ");
+                    String out = sc.next();
+
+                    Room selectedRoom = null;
+                    for (Room r : hotel.roomList) {
+                        if (r.number == number) {
+                            selectedRoom = r;
+                            break;
+                        }
+                    }
+
+                    if (selectedRoom == null) {
+                        System.out.println("Couldn’t find that room.");
+                        continue;
+                    }
+
+                    Booking confirmed = hotel.createBooking(guest, selectedRoom, in, out);
+                    if (confirmed == null) {
+                        System.out.println("That room is already booked for those dates.");
+                    } else {
+                        double rate = switch (selectedRoom.type) {
+                            case SINGLE -> 100;
+                            case DOUBLE -> 180;
+                            case SUITE -> 300;
+                        };
+                        System.out.printf("Total cost: $%.2f%n", rate);
+                        System.out.print("Pay now? (yes/no): ");
+                        String payAnswer = sc.next();
+
+                        if (payAnswer.equalsIgnoreCase("yes")) {
+                            hotel.handlePayment(confirmed, rate);
+                        } else {
+                            System.out.println("Payment deferred. Please remember to pay before check-in.");
+                        }
+
+                        System.out.println("✅ Booking complete:");
+                        System.out.println(confirmed);
+                    }
+                    break;
+
+                case "VIEW":
+                    hotel.listBookings();
+                    break;
+
+                case "EXIT":
+                    System.out.println("Goodbye! Hope to see you again.");
+                    sc.close();
+                    return;
+
+                default:
+                    System.out.println("That wasn’t a valid option.");
+            }
+        }
+    }
+}
