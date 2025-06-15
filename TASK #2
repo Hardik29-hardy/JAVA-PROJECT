@@ -1,0 +1,185 @@
+import java.util.*;
+
+public class SimulatedTradingPlatform {
+
+  
+    static class Stock {
+        String ticker;
+        double currentPrice;
+
+        Stock(String ticker, double startingPrice) {
+            this.ticker = ticker;
+            this.currentPrice = startingPrice;
+        }
+
+        
+        void updatePrice() {
+            double volatility = (Math.random() * 10) - 5; 
+            currentPrice += currentPrice * volatility / 100;
+            if (currentPrice < 1) currentPrice = 1;
+        }
+    }
+
+    
+    static class Portfolio {
+        double availableCash;
+        Map<String, Integer> stockHoldings;
+
+        Portfolio(double startingCash) {
+            this.availableCash = startingCash;
+            this.stockHoldings = new HashMap<>();
+        }
+
+        void buyStock(String ticker, int shares, double pricePerShare) {
+            double totalCost = shares * pricePerShare;
+            if (totalCost > availableCash) {
+                System.out.println("Oops, not enough funds.");
+                return;
+            }
+
+            availableCash -= totalCost;
+            int existingShares = stockHoldings.getOrDefault(ticker, 0);
+            stockHoldings.put(ticker, existingShares + shares);
+
+            System.out.printf("Bought %d shares of %s at $%.2f.\n", shares, ticker, pricePerShare);
+        }
+
+        void sellStock(String ticker, int sharesToSell, double pricePerShare) {
+            int sharesOwned = stockHoldings.getOrDefault(ticker, 0);
+            if (sharesToSell > sharesOwned) {
+                System.out.println("You don't have that many shares!");
+                return;
+            }
+
+            stockHoldings.put(ticker, sharesOwned - sharesToSell);
+            if (stockHoldings.get(ticker) == 0) {
+                stockHoldings.remove(ticker); 
+            }
+
+            double proceeds = sharesToSell * pricePerShare;
+            availableCash += proceeds;
+
+            System.out.printf("Sold %d shares of %s at $%.2f.\n", sharesToSell, ticker, pricePerShare);
+        }
+
+        double calculateTotalValue(Map<String, Stock> marketPrices) {
+            double value = availableCash;
+            for (var entry : stockHoldings.entrySet()) {
+                Stock stock = marketPrices.get(entry.getKey());
+                if (stock != null) {
+                    double stockValue = stock.currentPrice * entry.getValue();
+                    value += stockValue;
+                }
+            }
+            return value;
+        }
+
+        void printSummary(Map<String, Stock> market) {
+            System.out.println("\n=== Portfolio Summary ===");
+            System.out.printf("Cash on hand: $%.2f\n", availableCash);
+
+            if (stockHoldings.isEmpty()) {
+                System.out.println("No stocks owned at the moment.");
+            } else {
+                for (var e : stockHoldings.entrySet()) {
+                    String ticker = e.getKey();
+                    int count = e.getValue();
+                    Stock st = market.get(ticker);
+
+                    if (st != null) {
+                        double totalVal = st.currentPrice * count;
+                        System.out.printf("%s: %d shares @ $%.2f (Total: $%.2f)\n",
+                                ticker, count, st.currentPrice, totalVal);
+                    }
+                }
+            }
+
+            System.out.printf("Total account value: $%.2f\n", calculateTotalValue(market));
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        Map<String, Stock> fakeMarket = new HashMap<>();
+        fakeMarket.put("AAPL", new Stock("AAPL", 150.00));
+        fakeMarket.put("GOOG", new Stock("GOOG", 2800.00));
+        fakeMarket.put("TSLA", new Stock("TSLA", 700.00));
+        fakeMarket.put("AMZN", new Stock("AMZN", 3400.00));
+        fakeMarket.put("MSFT", new Stock("MSFT", 290.00));
+
+        Portfolio userAccount = new Portfolio(10000); // Let's say the user starts with $10K
+
+        System.out.println("~~ Welcome to the Trading Sim ~~");
+        System.out.println("Available Commands: MARKET, BUY, SELL, PORTFOLIO, QUIT");
+
+        while (true) {
+            System.out.print("\nEnter command: ");
+            String userInput = sc.next().trim().toUpperCase();
+
+          
+            for (Stock st : fakeMarket.values()) {
+                st.updatePrice();
+            }
+
+            switch (userInput) {
+                case "MARKET":
+                    System.out.println("\nLatest Market Snapshot:");
+                    for (Stock stock : fakeMarket.values()) {
+                        System.out.printf("%s: $%.2f\n", stock.ticker, stock.currentPrice);
+                    }
+                    break;
+
+                case "BUY":
+                    System.out.print("Stock to buy: ");
+                    String symbolToBuy = sc.next().trim().toUpperCase();
+                    if (!fakeMarket.containsKey(symbolToBuy)) {
+                        System.out.println("That stock doesn't exist.");
+                        break;
+                    }
+
+                    System.out.print("How many shares?: ");
+                    int amountToBuy = sc.nextInt();
+                    if (amountToBuy <= 0) {
+                        System.out.println("Try a positive number.");
+                        break;
+                    }
+
+                    double pricePerShare = fakeMarket.get(symbolToBuy).currentPrice;
+                    userAccount.buyStock(symbolToBuy, amountToBuy, pricePerShare);
+                    break;
+
+                case "SELL":
+                    System.out.print("Stock to sell: ");
+                    String symbolToSell = sc.next().trim().toUpperCase();
+                    if (!fakeMarket.containsKey(symbolToSell)) {
+                        System.out.println("Not a recognized stock.");
+                        break;
+                    }
+
+                    System.out.print("How many shares?: ");
+                    int sharesToSell = sc.nextInt();
+                    if (sharesToSell <= 0) {
+                        System.out.println("Try selling a positive number.");
+                        break;
+                    }
+
+                    double salePrice = fakeMarket.get(symbolToSell).currentPrice;
+                    userAccount.sellStock(symbolToSell, sharesToSell, salePrice);
+                    break;
+
+                case "PORTFOLIO":
+                    userAccount.printSummary(fakeMarket);
+                    break;
+
+                case "QUIT":
+                    System.out.println("Thanks for playing the market. Bye!");
+                    sc.close();
+                    return;
+
+                default:
+                    System.out.println("That command doesn’t ring a bell.");
+            }
+        }
+    }
+}
