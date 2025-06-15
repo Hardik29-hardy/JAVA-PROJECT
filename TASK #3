@@ -1,0 +1,68 @@
+import java.util.*;
+
+public class SimpleChatbot {
+
+  
+    private static final Map<String, List<String>> intentKeywordMap = Map.of(
+        "greeting", Arrays.asList("hello", "hi", "hey", "greetings"),
+        "farewell", Arrays.asList("bye", "goodbye", "see you", "exit"),
+        "weather", Arrays.asList("weather", "rain", "sunny", "forecast"),
+        "help", Arrays.asList("help", "support", "assist", "question")
+    );
+
+    
+    private static final Map<String, String> responsesForIntents = Map.of(
+        "greeting", "Hey there! How can I help you today?",
+        "farewell", "Catch you later! Have an awesome day!",
+        "weather", "Hmm... I can't check the weather for you, but I hope it’s nice out!",
+        "help", "Sure thing — what do you need help with?"
+    );
+
+    public static void main(String[] args) {
+        Scanner inputReader = new Scanner(System.in);
+
+        System.out.println("SimpleChatbot is now online. Start chatting!");
+        System.out.println("(type 'bye' or something similar to end)");
+
+        while (true) {
+            System.out.print("> ");
+            String userInput = inputReader.nextLine();
+
+            if (userInput.trim().isEmpty()) {
+                System.out.println("Say something and I’ll try to help!");
+                continue;
+            }
+
+            String cleanedInput = userInput.toLowerCase();  // Just to be safe
+            String matchedIntent = findIntent(cleanedInput);
+
+            if (matchedIntent == null) {
+                System.out.println("Hmm, I didn’t catch that. Could you try rephrasing?");
+            } else {
+                System.out.println(responsesForIntents.get(matchedIntent));
+                if ("farewell".equals(matchedIntent)) {
+                    break; 
+                }
+            }
+        }
+
+        inputReader.close();
+        System.out.println("Chatbot session ended. See you!");
+    }
+
+  
+    private static String findIntent(String message) {
+        for (Map.Entry<String, List<String>> intentEntry : intentKeywordMap.entrySet()) {
+            String intentName = intentEntry.getKey();
+            List<String> keywords = intentEntry.getValue();
+
+            for (String word : keywords) {
+                if (message.contains(word)) {
+                  
+                    return intentName;
+                }
+            }
+        }
+        return null;
+    }
+}
